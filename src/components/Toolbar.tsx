@@ -4,8 +4,9 @@ import { redo, undo, useDocStore, useUiStore, type Tool } from '../store'
 import { hexToRgb, rgbToHex } from '../utils/color'
 import type { FontFamily } from '../model/types'
 
-const TOOLS: { key: Tool; label: string; title: string }[] = [
-  { key: 'select', label: '⬚', title: 'Select / move (V)' },
+const TOOLS: { key: Tool; label: string; title: string; wide?: boolean }[] = [
+  { key: 'select', label: '↖ Select', title: 'Select / move (V or Esc)', wide: true },
+  { key: 'edittext', label: 'Edit text', title: 'Edit existing text — click a line (E)', wide: true },
   { key: 'text', label: 'T', title: 'Add text (T)' },
   { key: 'whiteout', label: '▭', title: 'Whiteout — cover content, then type over it (W)' },
   { key: 'highlight', label: '🖍', title: 'Highlight (H)' },
@@ -13,7 +14,7 @@ const TOOLS: { key: Tool; label: string; title: string }[] = [
   { key: 'ellipse', label: '○', title: 'Ellipse' },
   { key: 'line', label: '∕', title: 'Line' },
   { key: 'arrow', label: '↗', title: 'Arrow' },
-  { key: 'ink', label: '✎', title: 'Draw freehand (D)' },
+  { key: 'ink', label: '✎', title: 'Draw freehand (D) — Esc returns to Select' },
   { key: 'note', label: '💬', title: 'Sticky note (N)' },
 ]
 
@@ -54,7 +55,14 @@ export function Toolbar() {
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0]
-            if (f) void openPdfFile(f)
+            if (f) {
+              openPdfFile(f).catch((err) =>
+                useUiStore.getState().setNotice({
+                  kind: 'error',
+                  message: err instanceof Error ? err.message : String(err),
+                }),
+              )
+            }
             e.target.value = ''
           }}
         />
@@ -70,7 +78,14 @@ export function Toolbar() {
               hidden
               onChange={(e) => {
                 const f = e.target.files?.[0]
-                if (f) void mergePdfFile(f)
+                if (f) {
+                  mergePdfFile(f).catch((err) =>
+                    useUiStore.getState().setNotice({
+                      kind: 'error',
+                      message: err instanceof Error ? err.message : String(err),
+                    }),
+                  )
+                }
                 e.target.value = ''
               }}
             />
@@ -85,7 +100,7 @@ export function Toolbar() {
             {TOOLS.map((t) => (
               <button
                 key={t.key}
-                className={`btn icon${tool === t.key ? ' active' : ''}`}
+                className={`btn${t.wide ? '' : ' icon'}${tool === t.key ? ' active' : ''}`}
                 title={t.title}
                 onClick={() => setTool(t.key)}
               >

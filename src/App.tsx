@@ -5,6 +5,7 @@ import { ThumbnailRail } from './components/ThumbnailRail'
 import { DocumentView } from './components/viewer/DocumentView'
 import { ExportDialog } from './components/ExportDialog'
 import { SignatureDialog } from './components/SignatureDialog'
+import { InfoBanner } from './components/InfoBanner'
 import { redo, undo, useDocStore, useUiStore } from './store'
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
       }
       const shortcuts: Record<string, () => void> = {
         v: () => ui.setTool('select'),
+        e: () => ui.setTool('edittext'),
         t: () => ui.setTool('text'),
         w: () => ui.setTool('whiteout'),
         h: () => ui.setTool('highlight'),
@@ -60,6 +62,7 @@ export default function App() {
   return (
     <div className="app">
       <Toolbar />
+      <InfoBanner />
       {loaded ? (
         <div className="workspace">
           <ThumbnailRail />

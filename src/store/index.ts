@@ -125,6 +125,7 @@ export const clearHistory = () => docTemporal.getState().clear()
 
 export type Tool =
   | 'select'
+  | 'edittext'
   | 'text'
   | 'whiteout'
   | 'highlight'
@@ -135,6 +136,8 @@ export type Tool =
   | 'ink'
   | 'note'
   | 'signature'
+
+export type Notice = { kind: 'decrypted' | 'no-form' | 'error'; message: string }
 
 export type ToolOptions = {
   color: RGB
@@ -161,7 +164,9 @@ export type UiState = {
   toolOptions: ToolOptions
   signatureDialogOpen: boolean
   exportDialogOpen: boolean
+  notice: Notice | null
 
+  setNotice: (notice: Notice | null) => void
   setLoadedDocument: (docId: string, fileName: string) => void
   setTool: (tool: Tool) => void
   setZoom: (zoom: number) => void
@@ -195,9 +200,18 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   signatureDialogOpen: false,
   exportDialogOpen: false,
+  notice: null,
 
+  setNotice: (notice) => set({ notice }),
   setLoadedDocument: (docId, fileName) =>
-    set({ loaded: true, primaryDocId: docId, fileName, currentPageIndex: 0, selectedEditId: null }),
+    set({
+      loaded: true,
+      primaryDocId: docId,
+      fileName,
+      currentPageIndex: 0,
+      selectedEditId: null,
+      notice: null,
+    }),
   setTool: (tool) => set({ tool, selectedEditId: null, editingEditId: null }),
   setZoom: (zoom) => set({ zoom: Math.min(4, Math.max(0.25, zoom)) }),
   setCurrentPageIndex: (currentPageIndex) => set({ currentPageIndex }),

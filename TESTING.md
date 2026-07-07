@@ -9,7 +9,7 @@ rendering differ between viewers, which automation can't judge.
 
 ## Per release
 
-Samples: `public/samples/` (`simple-text`, `form`, `w9-form`, `rotated-pages`, `large-100pages`).
+Samples: `public/samples/` (`simple-text`, `form`, `form-protected`, `w9-form`, `rotated-pages`, `large-100pages`).
 
 1. **Viewers** — open an exported file (with text, whiteout, highlight, ink, shapes,
    note, signature, filled form) in **Acrobat Reader, Chrome, and Edge**:
@@ -18,6 +18,11 @@ Samples: `public/samples/` (`simple-text`, `form`, `w9-form`, `rotated-pages`, `
    - highlight doesn't obscure text underneath
 2. **W-9** (`w9-form.pdf`) — fill name/address/TIN boxes + checkboxes, export both
    flattened and unflattened, re-open in Acrobat.
+2b. **Protected form** (`form-protected.pdf`, or a real OREA form) — "unlocked copy"
+   banner appears, fields typeable, exported file opens cleanly with values intact.
+2c. **Edit text / double-click** — `Edit text` click on a printed line opens a
+   prefilled box over a whiteout (one Ctrl+Z removes both); double-click on empty
+   space with Select active drops a new text box.
 3. **Rotated pages** (`rotated-pages.pdf`) — add text + signature on the 90° and 270°
    pages; exported text must read upright and sit where it was placed.
 4. **Zoom levels** — repeat one edit of each kind at 50%, 100%, 240%; positions must
@@ -32,8 +37,10 @@ Samples: `public/samples/` (`simple-text`, `form`, `w9-form`, `rotated-pages`, `
 
 ## Known gaps / v2 candidates
 
-- True in-place text editing (content-stream rewrite)
+- True in-place text editing (content-stream rewrite; `Edit text` is whiteout+retype
+  with text detection)
 - Text-selection highlight (needs pdf.js text layer)
-- Encrypted PDFs, XFA forms, digital (cryptographic) signatures
+- User-password-encrypted PDFs (owner-locked PDFs are decrypted at load via
+  qpdf-wasm), XFA forms, digital (cryptographic) signatures
 - Export runs on the main thread; a worker would help on 500+ page docs
 - CropBox with non-zero origin is untested (coordinates assume MediaBox at 0,0)

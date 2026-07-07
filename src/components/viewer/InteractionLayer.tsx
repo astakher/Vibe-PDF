@@ -3,9 +3,12 @@ import { nanoid } from 'nanoid'
 import type { PageViewport } from '../../pdf/pdfjs'
 import type { Edit, PageDescriptor, Point } from '../../model/types'
 import { cssPointToPdf, cssRectToPdf, type CssRect } from '../../pdf/coords'
-import { TEXT_LINE_HEIGHT, TEXT_PADDING } from '../../pdf/drawHelpers'
-import { useDocStore, useUiStore, type Tool } from '../../store'
+import { TEXT_PADDING } from '../../pdf/drawHelpers'
+import { hitTestText } from '../../pdf/textItems'
+import { getTextLines } from '../../pdf/textLines'
+import { pauseHistory, resumeHistory, useDocStore, useUiStore, type Tool } from '../../store'
 import { rgbCss } from '../../utils/color'
+import { createTextEditAt } from './createEdits'
 
 const DRAG_TOOLS: Tool[] = ['whiteout', 'highlight', 'rect', 'ellipse', 'line', 'arrow', 'ink']
 
@@ -91,53 +94,88 @@ export function InteractionLayer({
         return
       }
       if (!bigEnough) return
+      // drag tools auto-return to select after each edit (Acrobat behavior); ink stays sticky
       const rect = cssRectToPdf(viewport, cssRect)
       if (tool === 'whiteout') {
-        addAndSelect({ ...base, type: 'whiteout', rect, color: { r: 1, g: 1, b: 1 } }, { keepTool: true })
+        addAndSelect({ ...base, type: 'whiteout', rect, color: { r: 1, g: 1, b: 1 } })
       } else if (tool === 'highlight') {
-        addAndSelect(
-          { ...base, type: 'highlight', rect, color: toolOptions.highlightColor, opacity: 0.4 },
-          { keepTool: true },
-        )
+        addAndSelect({ ...base, type: 'highlight', rect, color: toolOptions.highlightColor, opacity: 0.4 })
       } else if (tool === 'rect' || tool === 'ellipse') {
-        addAndSelect(
-          {
-            ...base,
-            type: 'shape',
-            shape: tool,
-            rect,
-            stroke: toolOptions.color,
-            strokeWidth: toolOptions.strokeWidth,
-          },
-          { keepTool: true },
-        )
+        addAndSelect({
+          ...base,
+          type: 'shape',
+          shape: tool,
+          rect,
+          stroke: toolOptions.color,
+          strokeWidth: toolOptions.strokeWidth,
+        })
       } else if (tool === 'line' || tool === 'arrow') {
         const p1 = cssPointToPdf(viewport, drag.start.x, drag.start.y)
         const p2 = cssPointToPdf(viewport, p.x, p.y)
-        addAndSelect(
-          { ...base, type: 'shape', shape: tool, p1, p2, stroke: toolOptions.color, strokeWidth: toolOptions.strokeWidth },
-          { keepTool: true },
-        )
+        addAndSelect({
+          ...base,
+          type: 'shape',
+          shape: tool,
+          p1,
+          p2,
+          stroke: toolOptions.color,
+          strokeWidth: toolOptions.strokeWidth,
+        })
       }
       return
     }
 
     // click tools
     if (tool === 'text') {
-      const heightCss = (toolOptions.fontSize * TEXT_LINE_HEIGHT + 2 * TEXT_PADDING) * viewport.scale + 2
-      const rect = cssRectToPdf(viewport, { left: p.x, top: p.y, width: 220 * viewport.scale, height: heightCss })
-      addAndSelect(
-        {
-          ...base,
+      createTextEditAt(desc, viewport, p.x, p.y)
+    } else if (tool === 'edittext') {
+      const pdfPoint = cssPointToPdf(viewport, p.x, p.y)
+      void getTextLines(desc.docId, desc.sourceIndex).then((lines) => {
+        const line = hitTestText(lines, pdfPoint)
+        if (!line) return
+        const doc = useDocStore.getState()
+        const z = doc.edits[desc.id]?.length ?? 0
+        const pad = 1
+        const whiteRect = {
+          x: line.rect.x - pad,
+          y: line.rect.y - pad,
+          w: line.rect.w + 2 * pad,
+          h: line.rect.h + 2 * pad,
+        }
+        // whiteout added UNPAUSED so zundo snapshots the pre-edit state; the text
+        // add is paused → the pair is a single undo step
+        doc.addEdit({
+          id: nanoid(8),
+          pageId: desc.id,
+          z,
+          type: 'whiteout',
+          rect: whiteRect,
+          color: { r: 1, g: 1, b: 1 },
+        })
+        pauseHistory()
+        const textId = nanoid(8)
+        doc.addEdit({
+          id: textId,
+          pageId: desc.id,
+          z: z + 1,
           type: 'text',
-          rect,
-          text: '',
-          fontFamily: toolOptions.fontFamily,
-          fontSize: toolOptions.fontSize,
-          color: toolOptions.color,
-        },
-        { startEditing: true },
-      )
+          rect: {
+            x: whiteRect.x - TEXT_PADDING,
+            y: whiteRect.y - TEXT_PADDING,
+            w: whiteRect.w + 2 * TEXT_PADDING,
+            h: whiteRect.h + 2 * TEXT_PADDING,
+          },
+          text: line.text,
+          fontFamily: 'NotoSans',
+          fontSize: Math.round(line.fontSize),
+          color: { r: 0, g: 0, b: 0 },
+        })
+        resumeHistory()
+        const ui = useUiStore.getState()
+        ui.setTool('select')
+        ui.setSelectedEditId(textId)
+        ui.setEditingEditId(textId)
+      })
     } else if (tool === 'note') {
       const at: Point = cssPointToPdf(viewport, p.x, p.y)
       addAndSelect({ ...base, type: 'note', at, text: '', color: { r: 1, g: 0.85, b: 0.2 } }, { startEditing: true })

@@ -6,7 +6,8 @@ A lightweight, browser-only PDF editor (an Acrobat-Pro-style tool for everyday t
 ## Features
 
 - **View** — drag & drop or open PDFs, continuous scroll, page thumbnails, zoom (Ctrl+wheel), crisp HiDPI rendering, virtualized for large documents
-- **Fill forms** — AcroForm text fields, checkboxes, radio groups, dropdowns, list boxes; optional flattening on download
+- **Fill forms** — AcroForm text fields, checkboxes, radio groups, dropdowns, list boxes; optional flattening on download. Owner-password-protected forms (OREA, government) are decrypted at load via qpdf-wasm so exports stay valid
+- **Edit text** — click any printed line to cover it and retype (text detected via pdf.js extraction); double-click anywhere to type on flattened forms
 - **Sign** — draw (smooth pen), type (3 cursive fonts, embedded as vector text), or upload a signature image (transparent PNG supported)
 - **Add text** — text boxes with font, size, and color; the same TTF is used on screen and embedded in the export, so placement is WYSIWYG
 - **Whiteout** — cover existing content and type over it (the standard overlay approach to "editing" PDF text)

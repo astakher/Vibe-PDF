@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid'
 import type { PageDescriptor, Rotation } from '../model/types'
-import { registerDocument } from './registry'
+import { getDocumentProxy, registerDocument } from './registry'
+import { maybeDecrypt } from './decrypt'
 import { clearHistory, useDocStore, useUiStore } from '../store'
 
 const normRotation = (r: number): Rotation => ((((r % 360) + 360) % 360) as Rotation)
@@ -26,18 +27,46 @@ export async function buildDescriptors(docId: string, bytes: Uint8Array): Promis
 
 /** Load a file as the primary document, replacing any current one. */
 export async function openPdfFile(file: File): Promise<void> {
-  const bytes = new Uint8Array(await file.arrayBuffer())
+  const raw = new Uint8Array(await file.arrayBuffer())
+  const { bytes, wasEncrypted } = await maybeDecrypt(raw)
   const docId = nanoid(8)
   const descriptors = await buildDescriptors(docId, bytes)
   useDocStore.getState().setDocument(descriptors)
   clearHistory()
   useUiStore.getState().setLoadedDocument(docId, file.name)
+  void announceDocument(docId, wasEncrypted)
 }
 
 /** Merge another PDF's pages into the current document at the given index (default: end). */
 export async function mergePdfFile(file: File, atIndex?: number): Promise<void> {
-  const bytes = new Uint8Array(await file.arrayBuffer())
+  const raw = new Uint8Array(await file.arrayBuffer())
+  const { bytes } = await maybeDecrypt(raw)
   const docId = nanoid(8)
   const descriptors = await buildDescriptors(docId, bytes)
   useDocStore.getState().appendPages(descriptors, atIndex)
+}
+
+/** Post-load notice: decrypted copy, or guidance when the PDF has no form fields. */
+async function announceDocument(docId: string, wasEncrypted: boolean): Promise<void> {
+  const { setNotice } = useUiStore.getState()
+  if (wasEncrypted) {
+    setNotice({
+      kind: 'decrypted',
+      message: "This PDF was password-protected — you're editing an unlocked copy.",
+    })
+    return
+  }
+  try {
+    const fields = await getDocumentProxy(docId).getFieldObjects()
+    const hasFormFields = !!fields && Object.keys(fields).length > 0
+    if (!hasFormFields) {
+      setNotice({
+        kind: 'no-form',
+        message:
+          'No fillable fields in this PDF — double-click anywhere to type, or use Edit text to change existing text.',
+      })
+    }
+  } catch {
+    // notice is best-effort only
+  }
 }

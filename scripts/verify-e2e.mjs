@@ -147,6 +147,73 @@ await page.mouse.click(formPageBox.x + 300, formPageBox.y + 500)
 check('typed signature placed', (await page.locator('.sig-typed').count()) === 1)
 await shot('07-signature')
 
+// ---------- 9b. protected PDF: decrypt banner + fill + valid export ----------
+await page.setInputFiles('input[type=file]', 'public/samples/form-protected.pdf')
+// wait on the NEW document (previous doc also had form inputs — don't match stale DOM)
+await page.waitForSelector('.file-name[title*="form-protected"]', { timeout: 15000 })
+const bannerAppeared = await page
+  .waitForSelector('.info-banner.info-decrypted', { timeout: 15000 })
+  .then(() => true)
+  .catch(() => false)
+check('decrypted banner shown', bannerAppeared)
+await page.waitForSelector('.form-layer input[type=text]', { timeout: 15000 })
+await page.fill('.form-layer input[type=text] >> nth=0', 'Protected Fill')
+const dlp = page.waitForEvent('download')
+await page.click('button[title*="Download the edited PDF"]')
+await page.click('.dialog button:has-text("Download edited PDF")')
+const outPathP = path.join(SHOTS, 'exported-protected.pdf')
+await (await dlp).saveAs(outPathP)
+try {
+  const outP = await PDFDocument.load(await readFile(outPathP))
+  check('protected export re-parses (not corrupt)', outP.getPageCount() === 1)
+  check('protected export field persisted', outP.getForm().getTextField('applicant.name').getText() === 'Protected Fill')
+} catch (e) {
+  check('protected export re-parses (not corrupt)', false, String(e))
+}
+await page.keyboard.press('Escape')
+await shot('09-protected-form')
+
+// ---------- 9c. edit-text tool + double-click + tool auto-return ----------
+await page.setInputFiles('input[type=file]', 'public/samples/simple-text.pdf')
+await page.waitForSelector('.file-name[title*="simple-text"]', { timeout: 15000 })
+await page.waitForSelector('.page-view canvas.pdf-canvas', { timeout: 15000 })
+await page.waitForTimeout(600)
+const noFormBanner = await page
+  .waitForSelector('.info-banner.info-no-form', { timeout: 10000 })
+  .then(() => true)
+  .catch(() => false)
+check('no-form banner shown on plain PDF', noFormBanner)
+
+const sBox = await page.locator('.page-view').first().boundingBox()
+await page.click('button:has-text("Edit text")')
+await page.mouse.click(sBox.x + 120, sBox.y + 62) // heading "Sample document — page 1"
+await page.waitForSelector('.text-edit', { timeout: 5000 })
+const prefilled = await page.locator('.text-edit').inputValue()
+check('edit-text prefills clicked line', prefilled.includes('Sample document'), JSON.stringify(prefilled))
+check('edit-text adds whiteout under it', (await page.locator('.edits-svg rect').count()) >= 1)
+await shot('10-edittext')
+await page.mouse.click(sBox.x + 400, sBox.y + 700) // blur (resumes history)
+await page.keyboard.press('Control+z')
+await page.waitForTimeout(200)
+check(
+  'one undo removes whiteout+text pair',
+  (await page.locator('.text-edit').count()) === 0 && (await page.locator('.edits-svg rect').count()) === 0,
+)
+
+await page.mouse.dblclick(sBox.x + 300, sBox.y + 500)
+await page.waitForTimeout(300)
+check('double-click creates a text box', (await page.locator('.text-edit').count()) === 1)
+await page.keyboard.press('Escape')
+
+await page.click('button[title="Rectangle"]')
+await page.mouse.move(sBox.x + 100, sBox.y + 300)
+await page.mouse.down()
+await page.mouse.move(sBox.x + 200, sBox.y + 350, { steps: 3 })
+await page.mouse.up()
+await page.waitForTimeout(200)
+const selectClass = await page.locator('button:has-text("Select")').getAttribute('class')
+check('drag tool auto-returns to Select', selectClass.includes('active'), selectClass)
+
 // ---------- 10. rotated source pages render + edit ----------
 await page.setInputFiles('input[type=file]', 'public/samples/rotated-pages.pdf')
 await page.waitForSelector('.page-view canvas.pdf-canvas', { timeout: 15000 })

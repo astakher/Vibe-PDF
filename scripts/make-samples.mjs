@@ -1,7 +1,9 @@
 // Generates the sample PDFs used for manual testing (public/samples/).
 // Run: node scripts/make-samples.mjs
-import { writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib'
+import createQpdf from '@neslinesli93/qpdf-wasm'
 
 const outDir = new URL('../public/samples/', import.meta.url)
 await mkdir(outDir, { recursive: true })
@@ -84,6 +86,27 @@ async function save(doc, name) {
   country.addToPage(page, { x: 140, y: 458, width: 160, height: 20 })
 
   await save(doc, 'form.pdf')
+}
+
+// --- form-protected.pdf: the form above, owner-password encrypted (opens without
+//     a password — the pattern used by OREA/government forms)
+{
+  const src = await readFile(new URL('form.pdf', outDir))
+  const wasmPath = fileURLToPath(
+    new URL('../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm', import.meta.url),
+  )
+  const qpdf = await createQpdf({ locateFile: () => wasmPath })
+  qpdf.FS.writeFile('/in.pdf', new Uint8Array(src))
+  let code
+  try {
+    code = qpdf.callMain(['--encrypt', '', 'owner-secret', '256', '--', '/in.pdf', '/out.pdf'])
+  } catch (e) {
+    code = e?.status ?? 1
+  }
+  if (code !== 0 && code !== 3) throw new Error(`qpdf --encrypt failed: ${code}`)
+  const bytes = qpdf.FS.readFile('/out.pdf')
+  await writeFile(new URL('form-protected.pdf', outDir), bytes)
+  console.log(`wrote form-protected.pdf (${bytes.length} bytes)`)
 }
 
 // --- large-100pages.pdf

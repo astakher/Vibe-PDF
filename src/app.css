@@ -227,8 +227,44 @@ body {
   display: block;
 }
 
+/* ---------- info banner ---------- */
+
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-banner.info-decrypted {
+  background: rgba(59, 130, 246, 0.14);
+  color: #9cc4ff;
+}
+
+.info-banner.info-no-form {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f0b95c;
+}
+
+.info-banner.info-error {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f1969d;
+}
+
+.banner-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+}
+
 /* ---------- edit layers ---------- */
 
+.page-layers,
 .edits-svg,
 .edits-html,
 .form-layer,
@@ -246,6 +282,10 @@ body {
 .interaction-layer.tool-note,
 .interaction-layer.tool-signature {
   cursor: copy;
+}
+
+.interaction-layer.tool-edittext {
+  cursor: text;
 }
 
 .rubber-band {
