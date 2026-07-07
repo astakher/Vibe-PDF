@@ -1,0 +1,27 @@
+/* Same TTFs are embedded into exported PDFs via pdf-lib — keeping screen and
+   export on identical faces is what makes text placement WYSIWYG. */
+@font-face {
+  font-family: 'NotoSans';
+  src: url('./NotoSans-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'NotoSansBold';
+  src: url('./NotoSans-Bold.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GreatVibes';
+  src: url('./GreatVibes-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pacifico';
+  src: url('./Pacifico-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Satisfy';
+  src: url('./Satisfy-Regular.ttf') format('truetype');
+  font-display: swap;
+}
