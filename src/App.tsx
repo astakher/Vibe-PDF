@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Toolbar } from './components/Toolbar'
 import { FileDropZone } from './components/FileDropZone'
 import { ThumbnailRail } from './components/ThumbnailRail'
@@ -9,11 +9,33 @@ import { InfoBanner } from './components/InfoBanner'
 import { XfaBar } from './components/XfaBar'
 import { XfaFormView } from './components/viewer/XfaFormView'
 import { redo, undo, useDocStore, useUiStore } from './store'
+import { openPdfFromUrl } from './pdf/loadPdf'
 
 export default function App() {
   const loaded = useUiStore((s) => s.loaded)
   const isXfa = useUiStore((s) => s.isXfa)
   const xfaMode = loaded && isXfa
+  const [autoLoading, setAutoLoading] = useState(false)
+
+  // ?file= auto-load: sites (e.g. a realtor's form library) can deep-link a PDF
+  // straight into the editor. The URL must be same-origin or CORS-enabled.
+  useEffect(() => {
+    const fileUrl = new URLSearchParams(window.location.search).get('file')
+    if (!fileUrl) return
+    // Strip the param BEFORE fetching so refresh/back never re-triggers the load
+    // (also makes StrictMode's double effect run a no-op the second time).
+    window.history.replaceState(null, '', window.location.pathname)
+    setAutoLoading(true)
+    openPdfFromUrl(fileUrl)
+      .catch(() => {
+        useUiStore.getState().setNotice({
+          kind: 'error',
+          message:
+            'Could not load that form automatically. Download it from the site, then drag it here.',
+        })
+      })
+      .finally(() => setAutoLoading(false))
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -81,6 +103,13 @@ export default function App() {
         <div className="workspace">
           <ThumbnailRail />
           <DocumentView />
+        </div>
+      ) : autoLoading ? (
+        <div className="drop-zone">
+          <div className="drop-zone-inner">
+            <h1>Loading your form…</h1>
+            <p>Fetching the PDF — this only takes a moment.</p>
+          </div>
         </div>
       ) : (
         <FileDropZone />

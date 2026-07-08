@@ -45,6 +45,20 @@ export async function openPdfFile(file: File): Promise<void> {
   void announceDocument(docId, wasEncrypted, isXfa)
 }
 
+/** Fetch a PDF by URL (the ?file= auto-load) and open it through the normal pipeline. */
+export async function openPdfFromUrl(rawUrl: string): Promise<void> {
+  const url = new URL(rawUrl, window.location.href)
+  const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && isLocal)) {
+    throw new Error('Unsupported URL')
+  }
+  const res = await fetch(url.href)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const blob = await res.blob()
+  const name = decodeURIComponent(url.pathname.split('/').pop() || 'document.pdf')
+  await openPdfFile(new File([blob], name, { type: 'application/pdf' }))
+}
+
 /** Merge another PDF's pages into the current document at the given index (default: end). */
 export async function mergePdfFile(file: File, atIndex?: number): Promise<void> {
   const raw = new Uint8Array(await file.arrayBuffer())
