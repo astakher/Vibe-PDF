@@ -2,6 +2,14 @@
   command = "npm run build"
   publish = "dist"
 
+# The app is built with base "/pdf/", so its HTML references /pdf/assets/...
+# Map those back to the physical files (which live at /assets/...) so the app
+# works both standalone (root) and when takher.ca proxies /pdf/ here.
+[[redirects]]
+  from = "/pdf/*"
+  to = "/:splat"
+  status = 200
+
 [[headers]]
   for = "/assets/*"
   [headers.values]
