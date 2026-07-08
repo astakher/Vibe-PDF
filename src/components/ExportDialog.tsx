@@ -41,11 +41,15 @@ export function ExportDialog() {
   const [warnings, setWarnings] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // Prefill the file name with the original document name each time the dialog opens.
+  // Prefill the file name + focus the requested tab each time the dialog opens.
   const originalName = useUiStore((s) => s.fileName)
+  const initialTab = useUiStore((s) => s.exportTab)
   useEffect(() => {
-    if (open) setFileName((originalName ?? 'document').replace(/\.pdf$/i, ''))
-  }, [open, originalName])
+    if (open) {
+      setFileName((originalName ?? 'document').replace(/\.pdf$/i, ''))
+      setTab(initialTab)
+    }
+  }, [open, originalName, initialTab])
 
   useEffect(() => {
     if (!open) return
@@ -148,14 +152,17 @@ export function ExportDialog() {
   return (
     <div className="dialog-backdrop" onClick={() => !busy && setOpen(false)}>
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <h2>Export</h2>
-        <div className="tabs">
-          {(['download', 'split', 'compress'] as Tab[]).map((t) => (
-            <button key={t} className={`btn${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-              {t[0].toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
+        <h2>{tab === 'split' ? 'Split' : 'Export'}</h2>
+        {/* Split has its own toolbar button; the dialog tabs cover Download & Compress. */}
+        {tab !== 'split' && (
+          <div className="tabs">
+            {(['download', 'compress'] as Tab[]).map((t) => (
+              <button key={t} className={`btn${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
+                {t[0].toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
 
         {tab === 'download' && (
           <div className="dialog-section">

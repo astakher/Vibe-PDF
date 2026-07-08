@@ -165,6 +165,8 @@ export type UiState = {
   toolOptions: ToolOptions
   signatureDialogOpen: boolean
   exportDialogOpen: boolean
+  /** which tab the export dialog opens on */
+  exportTab: 'download' | 'split' | 'compress'
   notice: Notice | null
 
   setNotice: (notice: Notice | null) => void
@@ -179,6 +181,7 @@ export type UiState = {
   setToolOptions: (patch: Partial<ToolOptions>) => void
   setSignatureDialogOpen: (open: boolean) => void
   setExportDialogOpen: (open: boolean) => void
+  openExport: (tab: 'download' | 'split' | 'compress') => void
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -201,6 +204,7 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   signatureDialogOpen: false,
   exportDialogOpen: false,
+  exportTab: 'download',
   notice: null,
 
   setNotice: (notice) => set({ notice }),
@@ -227,4 +231,5 @@ export const useUiStore = create<UiState>()((set) => ({
   setToolOptions: (patch) => set((s) => ({ toolOptions: { ...s.toolOptions, ...patch } })),
   setSignatureDialogOpen: (signatureDialogOpen) => set({ signatureDialogOpen }),
   setExportDialogOpen: (exportDialogOpen) => set({ exportDialogOpen }),
+  openExport: (exportTab) => set({ exportTab, exportDialogOpen: true }),
 }))

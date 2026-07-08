@@ -4,12 +4,16 @@ import { redo, undo, useDocStore, useUiStore, type Tool } from '../store'
 import { hexToRgb, rgbToHex } from '../utils/color'
 import type { FontFamily } from '../model/types'
 
-const TOOLS: { key: Tool; label: string; title: string; wide?: boolean }[] = [
-  { key: 'select', label: '↖ Select', title: 'Select / move (V or Esc)', wide: true },
-  { key: 'edittext', label: 'Edit text', title: 'Edit existing text — click a line (E)', wide: true },
+// Leading, always-labeled tools shown as pills at the front of the tools group.
+const LEAD_TOOLS: { key: Tool; label: string; title: string }[] = [
+  { key: 'select', label: '↖ Select', title: 'Select / move (V or Esc)' },
+  { key: 'edittext', label: 'Edit text', title: 'Edit existing text — click a line (E)' },
+  { key: 'redact', label: 'Redact', title: 'Redact — permanently remove content (page becomes an image on download)' },
+]
+
+const DRAW_TOOLS: { key: Tool; label: string; title: string }[] = [
   { key: 'text', label: 'T', title: 'Add text (T)' },
   { key: 'whiteout', label: '▭', title: 'Whiteout — cover content, then type over it (W)' },
-  { key: 'redact', label: '█', title: 'Redact — permanently remove content (page becomes an image on download)' },
   { key: 'highlight', label: '🖍', title: 'Highlight (H)' },
   { key: 'rect', label: '□', title: 'Rectangle' },
   { key: 'ellipse', label: '○', title: 'Ellipse' },
@@ -101,10 +105,30 @@ export function Toolbar() {
       {loaded && (
         <>
           <div className="toolbar-group">
-            {TOOLS.map((t) => (
+            {LEAD_TOOLS.map((t) => (
               <button
                 key={t.key}
-                className={`btn${t.wide ? '' : ' icon'}${tool === t.key ? ' active' : ''}`}
+                className={`btn${tool === t.key ? ' active' : ''}`}
+                title={t.title}
+                onClick={() => setTool(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+            <button
+              className="btn"
+              title="Split into separate PDFs — by page, every N pages, or custom ranges"
+              onClick={() => useUiStore.getState().openExport('split')}
+            >
+              Split
+            </button>
+          </div>
+
+          <div className="toolbar-group">
+            {DRAW_TOOLS.map((t) => (
+              <button
+                key={t.key}
+                className={`btn icon${tool === t.key ? ' active' : ''}`}
                 title={t.title}
                 onClick={() => setTool(t.key)}
               >
@@ -201,7 +225,7 @@ export function Toolbar() {
             </button>
             <button
               className="btn primary"
-              onClick={() => useUiStore.getState().setExportDialogOpen(true)}
+              onClick={() => useUiStore.getState().openExport('download')}
               title="Download the edited PDF"
             >
               Download
