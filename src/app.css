@@ -283,15 +283,25 @@ body {
 /* Printing an XFA form prints the on-screen rendered HTML (browsers can't render
    the XFA PDF itself). Hide the app chrome and paginate the form pages. */
 @media print {
+  /* the global app shell clips to one screen (overflow:hidden, height:100%);
+     release that so the whole form paginates across sheets */
+  html,
+  body,
+  #root {
+    overflow: visible !important;
+    height: auto !important;
+  }
   .xfa-mode .toolbar,
   .xfa-mode .info-banner {
     display: none !important;
   }
   .xfa-mode,
+  .xfa-mode .app,
   .xfa-mode .document-view {
     position: static !important;
     overflow: visible !important;
     height: auto !important;
+    display: block !important;
     background: #fff !important;
   }
   .xfa-mode .document-pages {
