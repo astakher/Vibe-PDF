@@ -57,6 +57,7 @@ function boundsOf(edit: Edit, viewport: PageViewport): CssRect {
   switch (edit.type) {
     case 'text':
     case 'whiteout':
+    case 'redact':
     case 'highlight':
     case 'signature':
       return pdfRectToCss(viewport, edit.rect)
@@ -112,6 +113,7 @@ function EditBox({
     switch (edit.type) {
       case 'text':
       case 'whiteout':
+      case 'redact':
       case 'highlight':
       case 'signature': {
         updateEdit(edit.id, { rect: cssRectToPdf(viewport, r) })
@@ -154,8 +156,8 @@ function EditBox({
     }
   }
 
-  const resizable = edit.type === 'text' || edit.type === 'whiteout' || edit.type === 'highlight' ||
-    edit.type === 'signature' || (edit.type === 'shape' && !!edit.rect)
+  const resizable = edit.type === 'text' || edit.type === 'whiteout' || edit.type === 'redact' ||
+    edit.type === 'highlight' || edit.type === 'signature' || (edit.type === 'shape' && !!edit.rect)
 
   return (
     <div style={{ pointerEvents: interactive ? 'auto' : 'none' }}>

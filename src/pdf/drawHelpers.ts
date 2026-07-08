@@ -1,4 +1,4 @@
-import type { PageDescriptor, Point, Rect, Rotation } from '../model/types'
+import type { Edit, PageDescriptor, Point, Rect, Rotation } from '../model/types'
 import { totalRotation } from '../model/types'
 
 /**
@@ -78,6 +78,46 @@ export function visualRectToUser(desc: Pick<PageDescriptor, 'width' | 'height'>,
 
 export function contentRotation(desc: PageDescriptor): Rotation {
   return totalRotation(desc)
+}
+
+/**
+ * Remap an edit's geometry from a source page's (unrotated) user space onto a
+ * rasterized replacement page: the raster is in DISPLAY orientation with
+ * rotation 0 and height `heightPt`, so old coords go user → visual → flip y.
+ */
+export function remapEditToRaster(
+  edit: Edit,
+  desc: Pick<PageDescriptor, 'width' | 'height'>,
+  rot: Rotation,
+  heightPt: number,
+): Edit {
+  const point = (p: Point): Point => {
+    const v = userToVisual(desc, rot, p)
+    return { x: v.vx, y: heightPt - v.vy }
+  }
+  const rect = (r: Rect): Rect => {
+    const v = userRectToVisual(desc, rot, r)
+    return { x: v.vx, y: heightPt - v.vy - v.vh, w: v.vw, h: v.vh }
+  }
+  switch (edit.type) {
+    case 'text':
+    case 'whiteout':
+    case 'redact':
+    case 'highlight':
+    case 'signature':
+      return { ...edit, rect: rect(edit.rect) }
+    case 'shape':
+      return {
+        ...edit,
+        rect: edit.rect ? rect(edit.rect) : undefined,
+        p1: edit.p1 ? point(edit.p1) : undefined,
+        p2: edit.p2 ? point(edit.p2) : undefined,
+      }
+    case 'ink':
+      return { ...edit, points: edit.points.map((s) => s.map(point)) }
+    case 'note':
+      return { ...edit, at: point(edit.at) }
+  }
 }
 
 /** Greedy word-wrap matching what the on-screen textarea shows (same font metrics). */

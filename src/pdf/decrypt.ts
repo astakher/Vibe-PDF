@@ -1,8 +1,8 @@
 /**
- * Owner-password-protected PDFs (common for government/real-estate forms) render
- * fine in pdf.js, but pdf-lib cannot decrypt — filling/drawing/saving produces a
- * corrupt file. So we decrypt ONCE at load time with qpdf (WASM, lazy-loaded) and
- * every downstream consumer (viewer, forms, exporter) works on decrypted bytes.
+ * qpdf (WASM, lazy-loaded) wrapper. Two jobs:
+ * - decrypt owner-password-protected PDFs at load time (pdf-lib can't decrypt,
+ *   so filling/drawing/saving encrypted files would produce corrupt output)
+ * - lossless restructuring for the "Basic" compression level
  */
 
 export class PasswordProtectedError extends Error {
@@ -29,9 +29,44 @@ export function isEncrypted(bytes: Uint8Array): boolean {
 }
 
 /**
- * Returns decrypted bytes for protected PDFs, the original bytes otherwise.
+ * Run qpdf with the given CLI args against `input` (mounted at /in.pdf; args must
+ * write /out.pdf). Fresh module instance per call — reusing one across callMain
+ * invocations is unreliable. Exit code 3 = success with warnings.
  * @param wasmUrl injection point for node/vitest (filesystem path to qpdf.wasm);
  *                omitted in the browser, where the wasm resolves as a Vite asset.
+ */
+export async function runQpdf(
+  args: string[],
+  input: Uint8Array,
+  wasmUrl?: string,
+): Promise<{ code: number; out: Uint8Array | null }> {
+  const url = wasmUrl ?? (await import('@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url')).default
+  const createModule = (await import('@neslinesli93/qpdf-wasm')).default
+  const qpdf = await createModule({ locateFile: () => url })
+  const fs = qpdf.FS as typeof qpdf.FS & { writeFile: (path: string, data: Uint8Array) => void }
+  fs.writeFile('/in.pdf', input)
+
+  let code: number
+  try {
+    code = qpdf.callMain(args)
+  } catch (e) {
+    // Emscripten may throw ExitStatus instead of returning
+    code = typeof (e as { status?: unknown })?.status === 'number' ? (e as { status: number }).status : 1
+  }
+
+  let out: Uint8Array | null = null
+  if (code === 0 || code === 3) {
+    try {
+      out = qpdf.FS.readFile('/out.pdf')
+    } catch {
+      out = null
+    }
+  }
+  return { code, out }
+}
+
+/**
+ * Returns decrypted bytes for protected PDFs, the original bytes otherwise.
  * @throws PasswordProtectedError when the file needs a user password (qpdf exit 2).
  */
 export async function maybeDecrypt(
@@ -39,23 +74,24 @@ export async function maybeDecrypt(
   wasmUrl?: string,
 ): Promise<{ bytes: Uint8Array; wasEncrypted: boolean }> {
   if (!isEncrypted(bytes)) return { bytes, wasEncrypted: false }
+  const { out } = await runQpdf(['--decrypt', '/in.pdf', '/out.pdf'], bytes, wasmUrl)
+  if (!out) throw new PasswordProtectedError()
+  return { bytes: out, wasEncrypted: true }
+}
 
-  const url = wasmUrl ?? (await import('@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url')).default
-  const createModule = (await import('@neslinesli93/qpdf-wasm')).default
-  // fresh instance per call — reusing a module across callMain invocations is unreliable
-  const qpdf = await createModule({ locateFile: () => url })
-  const fs = qpdf.FS as typeof qpdf.FS & { writeFile: (path: string, data: Uint8Array) => void }
-  fs.writeFile('/in.pdf', bytes)
-
-  let exitCode: number
-  try {
-    exitCode = qpdf.callMain(['--decrypt', '/in.pdf', '/out.pdf'])
-  } catch (e) {
-    // Emscripten may throw ExitStatus instead of returning
-    exitCode = typeof (e as { status?: unknown })?.status === 'number' ? (e as { status: number }).status : 1
-  }
-
-  // 0 = success, 3 = success with warnings
-  if (exitCode !== 0 && exitCode !== 3) throw new PasswordProtectedError()
-  return { bytes: qpdf.FS.readFile('/out.pdf'), wasEncrypted: true }
+/** Lossless restructure — the "Basic" compression level. Returns null if qpdf fails. */
+export async function compressLossless(bytes: Uint8Array, wasmUrl?: string): Promise<Uint8Array | null> {
+  const { out } = await runQpdf(
+    [
+      '--object-streams=generate',
+      '--recompress-flate',
+      '--compression-level=9',
+      '--stream-data=compress',
+      '/in.pdf',
+      '/out.pdf',
+    ],
+    bytes,
+    wasmUrl,
+  )
+  return out
 }

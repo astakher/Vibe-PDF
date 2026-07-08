@@ -9,6 +9,7 @@ const TOOLS: { key: Tool; label: string; title: string; wide?: boolean }[] = [
   { key: 'edittext', label: 'Edit text', title: 'Edit existing text — click a line (E)', wide: true },
   { key: 'text', label: 'T', title: 'Add text (T)' },
   { key: 'whiteout', label: '▭', title: 'Whiteout — cover content, then type over it (W)' },
+  { key: 'redact', label: '█', title: 'Redact — permanently remove content (page becomes an image on download)' },
   { key: 'highlight', label: '🖍', title: 'Highlight (H)' },
   { key: 'rect', label: '□', title: 'Rectangle' },
   { key: 'ellipse', label: '○', title: 'Ellipse' },
@@ -75,11 +76,14 @@ export function Toolbar() {
               ref={mergeRef}
               type="file"
               accept="application/pdf,.pdf"
+              multiple
               hidden
               onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) {
-                  mergePdfFile(f).catch((err) =>
+                const files = [...(e.target.files ?? [])]
+                if (files.length) {
+                  ;(async () => {
+                    for (const f of files) await mergePdfFile(f)
+                  })().catch((err) =>
                     useUiStore.getState().setNotice({
                       kind: 'error',
                       message: err instanceof Error ? err.message : String(err),
@@ -179,6 +183,22 @@ export function Toolbar() {
           </div>
 
           <div className="toolbar-group toolbar-right">
+            <button
+              className="btn"
+              title="Print the edited PDF"
+              onClick={() => {
+                import('../pdf/exportDownload')
+                  .then(({ printPdf }) => printPdf())
+                  .catch((err) =>
+                    useUiStore.getState().setNotice({
+                      kind: 'error',
+                      message: err instanceof Error ? err.message : String(err),
+                    }),
+                  )
+              }}
+            >
+              Print
+            </button>
             <button
               className="btn primary"
               onClick={() => useUiStore.getState().setExportDialogOpen(true)}

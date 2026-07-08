@@ -128,6 +128,7 @@ export type Tool =
   | 'edittext'
   | 'text'
   | 'whiteout'
+  | 'redact'
   | 'highlight'
   | 'rect'
   | 'ellipse'

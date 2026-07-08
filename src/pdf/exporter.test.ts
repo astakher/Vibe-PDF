@@ -174,6 +174,69 @@ describe('exportPdf', () => {
   })
 })
 
+describe('redaction', () => {
+  const TINY_JPEG = Uint8Array.from(
+    atob(
+      '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==',
+    ),
+    (c) => c.charCodeAt(0),
+  )
+
+  const makeDoc = async () => {
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    doc.addPage([612, 792]).drawText('SENSITIVE', { x: 100, y: 700, size: 20, font })
+    return doc.save()
+  }
+  const desc: PageDescriptor = {
+    id: 'p0', docId: 'main', sourceIndex: 0, baseRotation: 0, extraRotation: 0, width: 612, height: 792,
+  }
+  const redactEdits: Edit[] = [
+    { id: 'r1', pageId: 'p0', z: 0, type: 'redact', rect: { x: 90, y: 690, w: 150, h: 40 } },
+    { id: 'w1', pageId: 'p0', z: 1, type: 'whiteout', rect: { x: 10, y: 10, w: 50, h: 20 }, color: { r: 1, g: 1, b: 1 } },
+  ]
+
+  it('replaces redacted pages with the raster and remaps other edits', async () => {
+    const src = await makeDoc()
+    const calls: unknown[] = []
+    const { bytes, warnings } = await exportPdf({
+      primaryDocId: 'main',
+      pages: [desc],
+      edits: { p0: redactEdits },
+      formValues: {},
+      flattenForm: false,
+      getBytes: () => src,
+      getFontBytes,
+      rasterizePage: async (docId, sourceIndex, rotation, dpi, opts) => {
+        calls.push({ docId, sourceIndex, rotation, dpi, redactCount: opts.redactRects.length })
+        return { jpeg: TINY_JPEG, widthPt: 612, heightPt: 792 }
+      },
+    })
+    expect(calls).toEqual([{ docId: 'main', sourceIndex: 0, rotation: 0, dpi: 200, redactCount: 1 }])
+    expect(warnings.some((w) => w.includes('converted to images'))).toBe(true)
+    expect(warnings.filter((w) => w.includes('Could not draw'))).toEqual([])
+
+    const out = await PDFDocument.load(bytes)
+    expect(out.getPageCount()).toBe(1)
+    expect(out.getPage(0).getWidth()).toBe(612)
+    expect(out.getPage(0).getRotation().angle).toBe(0)
+  })
+
+  it('warns when no rasterizer is available (black box fallback)', async () => {
+    const src = await makeDoc()
+    const { warnings } = await exportPdf({
+      primaryDocId: 'main',
+      pages: [desc],
+      edits: { p0: redactEdits },
+      formValues: {},
+      flattenForm: false,
+      getBytes: () => src,
+      getFontBytes,
+    })
+    expect(warnings.some((w) => w.includes('black boxes only'))).toBe(true)
+  })
+})
+
 describe('parsePageRange', () => {
   it('parses ranges and singles', () => {
     expect(parsePageRange('1-3, 5', 10)).toEqual([0, 1, 2, 4])

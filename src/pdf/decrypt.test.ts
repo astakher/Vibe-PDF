@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
 import createModule from '@neslinesli93/qpdf-wasm'
-import { PasswordProtectedError, isEncrypted, maybeDecrypt } from './decrypt'
+import { PasswordProtectedError, compressLossless, isEncrypted, maybeDecrypt } from './decrypt'
 import { exportPdf } from './exporter'
 import type { EmbeddableFont } from './fonts'
 
@@ -91,5 +91,17 @@ describe('maybeDecrypt', () => {
   it('throws PasswordProtectedError for user-password files', async () => {
     const enc = await encrypt(plainForm, 'user-secret', 'owner-secret')
     await expect(maybeDecrypt(enc, WASM_PATH)).rejects.toBeInstanceOf(PasswordProtectedError)
+  })
+})
+
+describe('compressLossless', () => {
+  it('produces a valid, loadable PDF (typically smaller)', async () => {
+    const big = new Uint8Array(
+      await readFile(new URL('../../public/samples/large-100pages.pdf', import.meta.url)),
+    )
+    const out = await compressLossless(big, WASM_PATH)
+    expect(out).not.toBeNull()
+    const doc = await PDFDocument.load(out!)
+    expect(doc.getPageCount()).toBe(100)
   })
 })

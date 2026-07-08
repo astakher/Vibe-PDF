@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { userRectToVisual, userToVisual, visualRectToUser, visualToUser, wrapText } from './drawHelpers'
-import type { Rotation } from '../model/types'
+import {
+  remapEditToRaster,
+  userRectToVisual,
+  userToVisual,
+  visualRectToUser,
+  visualToUser,
+  wrapText,
+} from './drawHelpers'
+import type { Rotation, ShapeEdit, WhiteoutEdit } from '../model/types'
 
 /**
  * Reference transform replicated verbatim from pdf.js PageViewport
@@ -77,6 +84,39 @@ describe('rect roundtrips', () => {
       }
     })
   }
+})
+
+describe('remapEditToRaster', () => {
+  const whiteout: WhiteoutEdit = {
+    id: 'w', pageId: 'p', z: 0, type: 'whiteout',
+    rect: { x: 100, y: 150, w: 200, h: 50 }, color: { r: 1, g: 1, b: 1 },
+  }
+  const arrow: ShapeEdit = {
+    id: 'a', pageId: 'p', z: 1, type: 'shape', shape: 'arrow',
+    p1: { x: 100, y: 100 }, p2: { x: 300, y: 200 }, stroke: { r: 0, g: 0, b: 0 }, strokeWidth: 2,
+  }
+
+  it('rotation 0 is identity (raster height = page height)', () => {
+    const out = remapEditToRaster(whiteout, DIMS, 0, DIMS.height)
+    expect(out).toEqual(whiteout)
+  })
+
+  it('rotation 90: raster is landscape; rects land at the displayed position', () => {
+    // display dims: W'=H=792, H'=W=612 → raster heightPt = 612
+    const out = remapEditToRaster(whiteout, DIMS, 90, DIMS.width)
+    if (out.type !== 'whiteout') throw new Error('type changed')
+    // visual: vx=y..y+h → [150,200]; vy=x..x+w → [100,300]
+    // raster space: x=vx, y=heightPt−vy−vh
+    expect(out.rect).toEqual({ x: 150, y: 612 - 100 - 200, w: 50, h: 200 })
+  })
+
+  it('rotation 90: points map via userToVisual + y-flip', () => {
+    const out = remapEditToRaster(arrow, DIMS, 90, DIMS.width)
+    if (out.type !== 'shape') throw new Error('type changed')
+    // p1 (100,100): visual (vx=100, vy=100) → (100, 612−100)
+    expect(out.p1).toEqual({ x: 100, y: 512 })
+    expect(out.p2).toEqual({ x: 200, y: 612 - 300 })
+  })
 })
 
 describe('wrapText', () => {

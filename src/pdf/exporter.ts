@@ -23,6 +23,7 @@ import type {
   NoteEdit,
   PageDescriptor,
   Point,
+  Rect,
   RGB,
   ShapeEdit,
   SignatureEdit,
@@ -33,12 +34,22 @@ import type { EmbeddableFont } from './fonts'
 import {
   TEXT_LINE_HEIGHT,
   TEXT_PADDING,
+  remapEditToRaster,
   userRectToVisual,
   userToVisual,
   visualRectToUser,
   visualToUser,
   wrapText,
 } from './drawHelpers'
+
+/** Injected page rasterizer (browser: src/pdf/rasterize.ts; tests: a stub). */
+export type RasterizePageFn = (
+  docId: string,
+  sourceIndex: number,
+  rotation: 0 | 90 | 180 | 270,
+  dpi: number,
+  opts: { redactRects: Rect[]; formValues?: Record<string, FormValue> },
+) => Promise<{ jpeg: Uint8Array; widthPt: number; heightPt: number }>
 
 export type ExportInput = {
   primaryDocId: string
@@ -50,6 +61,8 @@ export type ExportInput = {
   /** injected so the exporter also runs under node (tests) */
   getBytes: (docId: string) => Uint8Array | Promise<Uint8Array>
   getFontBytes: (name: EmbeddableFont) => Promise<Uint8Array>
+  /** required for TRUE redaction; without it redact boxes draw as plain rectangles + warning */
+  rasterizePage?: RasterizePageFn
 }
 
 export type ExportResult = { bytes: Uint8Array; warnings: string[] }
@@ -114,13 +127,20 @@ export async function exportPdf(input: ExportInput): Promise<ExportResult> {
     pages.length === primaryDoc.getPageCount() &&
     pages.every((p, i) => p.docId === primaryDocId && p.sourceIndex === i)
 
+  const anyRedactions = pages.some((p) => (edits[p.id] ?? []).some((e) => e.type === 'redact'))
+
   let outDoc: PDFDocument
   let pageFor: (desc: PageDescriptor) => PDFPage
 
   if (isIdentity) {
     outDoc = primaryDoc
     const hasForm = await fillForm(primaryDoc)
-    if (hasForm && input.flattenForm) {
+    // Redacted pages get replaced wholesale — flatten first so no form fields
+    // reference the removed page's widgets (values stay visible everywhere).
+    if (hasForm && anyRedactions && !input.flattenForm) {
+      warnings.push('Form fields were flattened because the document contains redactions.')
+    }
+    if (hasForm && (input.flattenForm || anyRedactions)) {
       try {
         primaryDoc.getForm().flatten()
       } catch (e) {
@@ -181,13 +201,53 @@ export async function exportPdf(input: ExportInput): Promise<ExportResult> {
     }
   }
 
+  // TRUE redaction: replace each redacted page with a raster (black boxes burned
+  // in) so covered content is permanently removed, then remap that page's other
+  // edits into the raster's coordinate space.
+  const rasterized = new Map<string, { page: PDFPage; heightPt: number }>()
+  if (anyRedactions && input.rasterizePage) {
+    for (const desc of pages) {
+      const redactRects = (edits[desc.id] ?? [])
+        .filter((e): e is Extract<Edit, { type: 'redact' }> => e.type === 'redact')
+        .map((e) => e.rect)
+      if (redactRects.length === 0) continue
+      const rot = totalRotation(desc)
+      const raster = await input.rasterizePage(desc.docId, desc.sourceIndex, rot, 200, {
+        redactRects,
+        formValues,
+      })
+      const oldPage = pageFor(desc)
+      const idx = outDoc.getPages().indexOf(oldPage)
+      if (idx < 0) continue
+      outDoc.removePage(idx)
+      const newPage = outDoc.insertPage(idx, [raster.widthPt, raster.heightPt])
+      const img = await outDoc.embedJpg(raster.jpeg)
+      newPage.drawImage(img, { x: 0, y: 0, width: raster.widthPt, height: raster.heightPt })
+      rasterized.set(desc.id, { page: newPage, heightPt: raster.heightPt })
+    }
+    warnings.push('Pages with redactions were converted to images (their text is no longer selectable).')
+  } else if (anyRedactions) {
+    warnings.push(
+      'Redactions were drawn as black boxes only — the covered text is still present in the file.',
+    )
+  }
+
   // Draw edits, per page, in layer order.
   const imageCache = new Map<string, ReturnType<PDFDocument['embedPng']>>()
   for (const desc of pages) {
-    const list = sortEditsForRender(edits[desc.id] ?? [])
+    let list = sortEditsForRender(edits[desc.id] ?? [])
     if (list.length === 0) continue
-    const page = pageFor(desc)
-    const rot = totalRotation(desc)
+    let page = pageFor(desc)
+    let rot = totalRotation(desc)
+    const ras = rasterized.get(desc.id)
+    if (ras) {
+      // redact boxes are already burned into the raster; everything else remaps
+      list = list
+        .filter((e) => e.type !== 'redact')
+        .map((e) => remapEditToRaster(e, desc, rot, ras.heightPt))
+      page = ras.page
+      rot = 0
+    }
     for (const edit of list) {
       try {
         await drawEdit(outDoc, page, desc, rot, edit, fontFor, imageCache)
@@ -220,6 +280,18 @@ async function drawEdit(
         width: edit.rect.w,
         height: edit.rect.h,
         color: toRgb(edit.color),
+      })
+      return
+
+    // fallback only — with a rasterizePage injected, redacted pages are replaced
+    // wholesale and redact edits never reach drawEdit
+    case 'redact':
+      page.drawRectangle({
+        x: edit.rect.x,
+        y: edit.rect.y,
+        width: edit.rect.w,
+        height: edit.rect.h,
+        color: rgb(0, 0, 0),
       })
       return
 

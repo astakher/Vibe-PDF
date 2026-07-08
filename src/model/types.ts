@@ -38,6 +38,9 @@ export type TextBoxEdit = BaseEdit & {
 
 export type WhiteoutEdit = BaseEdit & { type: 'whiteout'; rect: Rect; color: RGB }
 
+/** Permanent black box; at export the whole page is rasterized with these burned in. */
+export type RedactEdit = BaseEdit & { type: 'redact'; rect: Rect }
+
 export type HighlightEdit = BaseEdit & { type: 'highlight'; rect: Rect; color: RGB; opacity: number }
 
 export type ShapeKind = 'rect' | 'ellipse' | 'line' | 'arrow'
@@ -74,6 +77,7 @@ export type SignatureEdit = BaseEdit & { type: 'signature'; rect: Rect; source: 
 export type Edit =
   | TextBoxEdit
   | WhiteoutEdit
+  | RedactEdit
   | HighlightEdit
   | ShapeEdit
   | InkEdit
@@ -92,7 +96,8 @@ export const LAYER_ORDER: Record<EditType, number> = {
   ink: 2,
   text: 3,
   signature: 4,
-  note: 5,
+  redact: 5,
+  note: 6,
 }
 
 export function sortEditsForRender(edits: Edit[]): Edit[] {

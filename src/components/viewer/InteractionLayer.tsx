@@ -10,7 +10,7 @@ import { pauseHistory, resumeHistory, useDocStore, useUiStore, type Tool } from 
 import { rgbCss } from '../../utils/color'
 import { createTextEditAt } from './createEdits'
 
-const DRAG_TOOLS: Tool[] = ['whiteout', 'highlight', 'rect', 'ellipse', 'line', 'arrow', 'ink']
+const DRAG_TOOLS: Tool[] = ['whiteout', 'redact', 'highlight', 'rect', 'ellipse', 'line', 'arrow', 'ink']
 
 /** Captures pointer input for the active drawing tool on one page. */
 export function InteractionLayer({
@@ -98,6 +98,8 @@ export function InteractionLayer({
       const rect = cssRectToPdf(viewport, cssRect)
       if (tool === 'whiteout') {
         addAndSelect({ ...base, type: 'whiteout', rect, color: { r: 1, g: 1, b: 1 } })
+      } else if (tool === 'redact') {
+        addAndSelect({ ...base, type: 'redact', rect })
       } else if (tool === 'highlight') {
         addAndSelect({ ...base, type: 'highlight', rect, color: toolOptions.highlightColor, opacity: 0.4 })
       } else if (tool === 'rect' || tool === 'ellipse') {
@@ -200,7 +202,7 @@ export function InteractionLayer({
     >
       {drag && tool !== 'ink' && tool !== 'line' && tool !== 'arrow' && (
         <div
-          className={`rubber-band${tool === 'highlight' ? ' rb-highlight' : ''}${tool === 'whiteout' ? ' rb-whiteout' : ''}`}
+          className={`rubber-band${tool === 'highlight' ? ' rb-highlight' : ''}${tool === 'whiteout' ? ' rb-whiteout' : ''}${tool === 'redact' ? ' rb-redact' : ''}`}
           style={{
             left: Math.min(drag.start.x, drag.current.x),
             top: Math.min(drag.start.y, drag.current.y),

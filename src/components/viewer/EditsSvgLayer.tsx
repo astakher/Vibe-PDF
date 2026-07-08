@@ -36,6 +36,10 @@ function EditShape({ edit, viewport }: { edit: Edit; viewport: PageViewport }) {
       const r = pdfRectToCss(viewport, edit.rect)
       return <rect x={r.left} y={r.top} width={r.width} height={r.height} fill={rgbCss(edit.color)} />
     }
+    case 'redact': {
+      const r = pdfRectToCss(viewport, edit.rect)
+      return <rect x={r.left} y={r.top} width={r.width} height={r.height} fill="#000" />
+    }
     case 'highlight': {
       const r = pdfRectToCss(viewport, edit.rect)
       return (
