@@ -274,9 +274,11 @@ body {
 }
 
 /* pdf.js computes XFA layout with line-height 1; the app's default (1.2) makes
-   captions taller than their cells and overlap neighbouring rows. Force 1. */
+   captions taller than their cells and overlap neighbouring rows. Force 1 on
+   text/labels only — NOT on form controls, which rely on pdf.js's own
+   line-height to vertically center the typed value. */
 .xfaLayer,
-.xfaLayer * {
+.xfaLayer :not(input):not(textarea):not(select) {
   line-height: 1 !important;
 }
 
