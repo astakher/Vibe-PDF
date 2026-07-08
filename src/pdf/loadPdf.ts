@@ -61,7 +61,7 @@ async function announceDocument(docId: string, wasEncrypted: boolean, isXfa: boo
     setNotice({
       kind: 'no-form',
       message:
-        'This is an Adobe LiveCycle (XFA) form. Vibe PDF shows a limited experimental view — for full functionality, open it in Adobe Acrobat Reader.',
+        'This is an Adobe LiveCycle (XFA) form — you can fill, download, and print it here. Sections that add rows or run validation only work in Adobe Acrobat Reader.',
     })
     return
   }

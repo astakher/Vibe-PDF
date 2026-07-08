@@ -168,10 +168,8 @@ export type UiState = {
   /** which tab the export dialog opens on */
   exportTab: 'download' | 'split' | 'compress'
   notice: Notice | null
-  /** current doc is a pure XFA (LiveCycle) form */
+  /** current doc is a pure XFA (LiveCycle) form → rendered via XfaFormView */
   isXfa: boolean
-  /** experimental XFA form mode enabled via ?xfa=1 */
-  xfaExperiment: boolean
 
   setNotice: (notice: Notice | null) => void
   setIsXfa: (isXfa: boolean) => void
@@ -212,8 +210,6 @@ export const useUiStore = create<UiState>()((set) => ({
   exportTab: 'download',
   notice: null,
   isXfa: false,
-  xfaExperiment:
-    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('xfa'),
 
   setNotice: (notice) => set({ notice }),
   setIsXfa: (isXfa) => set({ isXfa }),

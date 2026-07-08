@@ -13,8 +13,7 @@ import { redo, undo, useDocStore, useUiStore } from './store'
 export default function App() {
   const loaded = useUiStore((s) => s.loaded)
   const isXfa = useUiStore((s) => s.isXfa)
-  const xfaExperiment = useUiStore((s) => s.xfaExperiment)
-  const xfaMode = loaded && isXfa && xfaExperiment
+  const xfaMode = loaded && isXfa
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
