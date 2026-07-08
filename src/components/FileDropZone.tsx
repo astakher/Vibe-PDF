@@ -37,8 +37,11 @@ export function FileDropZone() {
       onDrop={onDrop}
     >
       <div className="drop-zone-inner">
-        <h1>PDF Editor</h1>
-        <p>Fill forms, sign, add text, annotate, and organize pages — entirely in your browser. Your files never leave this device.</p>
+        <h1>Edit PDFs, beautifully.</h1>
+        <p>
+          Fill forms, sign, edit text, redact, split, compress, and organize pages — entirely in
+          your browser. Your files never leave this device.
+        </p>
         <button className="btn primary" onClick={() => inputRef.current?.click()}>
           Open a PDF
         </button>

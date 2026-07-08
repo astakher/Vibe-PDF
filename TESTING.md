@@ -23,6 +23,15 @@ Samples: `public/samples/` (`simple-text`, `form`, `form-protected`, `w9-form`, 
 2c. **Edit text / double-click** — `Edit text` click on a printed line opens a
    prefilled box over a whiteout (one Ctrl+Z removes both); double-click on empty
    space with Select active drops a new text box.
+2d. **Multi-merge** — pick 2+ files in one Merge action; all pages append in order.
+2e. **Redact** — draw a box over sensitive text, download, reopen the export in a
+   viewer, try to select/copy the covered text: it must be gone (that page is now
+   an image). Confirm the "converted to images" notice appeared.
+2f. **Split** — every page / every N / custom ranges; 3+ parts arrive as one .zip.
+2g. **Compress** — Basic keeps text selectable; Moderate/Strong shrink more but
+   pages become images. Dialog shows before → after size.
+2h. **Print** — Print button opens the system print dialog with the edited content.
+2i. **Rename** — set a custom file name in the Download tab; saved file uses it.
 3. **Rotated pages** (`rotated-pages.pdf`) — add text + signature on the 90° and 270°
    pages; exported text must read upright and sit where it was placed.
 4. **Zoom levels** — repeat one edit of each kind at 50%, 100%, 240%; positions must

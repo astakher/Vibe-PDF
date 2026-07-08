@@ -12,12 +12,17 @@ A lightweight, browser-only PDF editor (an Acrobat-Pro-style tool for everyday t
 - **Add text** — text boxes with font, size, and color; the same TTF is used on screen and embedded in the export, so placement is WYSIWYG
 - **Whiteout** — cover existing content and type over it (the standard overlay approach to "editing" PDF text)
 - **Annotate** — highlight (multiply blend), rectangles, ellipses, lines, arrows, freehand ink, sticky notes (exported as real PDF `Text` annotations)
-- **Organize pages** — drag thumbnails to reorder, rotate, delete, merge another PDF, extract page ranges
+- **Organize pages** — drag thumbnails to reorder, rotate, delete, merge one or more PDFs at once, extract page ranges
+- **Redact** — draw black boxes; on download, affected pages are rasterized so the covered content is permanently removed (unrecoverable)
+- **Split** — every page / every N pages / custom ranges; 3+ outputs bundle into a `.zip`
+- **Compress** — Basic (lossless), Moderate (150 DPI), Strong (110 DPI); shows before/after size
+- **Print** — send the edited PDF straight to the system print dialog
+- **Rename on download** — name the exported file before saving
 - **Undo/redo** — Ctrl+Z / Ctrl+Y, gesture-coalesced
 
 ## Stack
 
-React 19 + TypeScript + Vite · [pdf.js](https://mozilla.github.io/pdf.js/) (rendering) · [pdf-lib](https://pdf-lib.js.org/) (writing) · zustand + zundo (state & history) · dnd-kit (thumbnail reorder) · signature_pad
+React 19 + TypeScript + Vite · [pdf.js](https://mozilla.github.io/pdf.js/) (rendering) · [pdf-lib](https://pdf-lib.js.org/) (writing) · [qpdf-wasm](https://github.com/neslinesli93/qpdf-wasm) (decrypt + lossless compress) · zustand + zundo (state & history) · dnd-kit (thumbnail reorder) · signature_pad · fflate (split zips). UI matches [takher.ca](https://takher.ca)'s liquid-glass design (Inter + frosted glass).
 
 ## Development
 
