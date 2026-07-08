@@ -10,8 +10,14 @@ type Entry = { bytes: Uint8Array; proxy: PDFDocumentProxy }
 const docs = new Map<string, Entry>()
 const pageCache = new Map<string, PDFPageProxy>() // key: `${docId}:${sourceIndex}`
 
+// Standard 14 fonts, copied to public/standard_fonts (served under the app base).
+// Without these, pdf.js uses wrong metrics and XFA form labels misalign/overlap.
+const standardFontDataUrl = `${import.meta.env.BASE_URL}standard_fonts/`
+
 export async function registerDocument(docId: string, bytes: Uint8Array): Promise<PDFDocumentProxy> {
-  const proxy = await pdfjs.getDocument({ data: bytes.slice() }).promise
+  // enableXfa only affects XFA (LiveCycle) forms; normal PDFs are unaffected.
+  const proxy = await pdfjs.getDocument({ data: bytes.slice(), enableXfa: true, standardFontDataUrl })
+    .promise
   docs.set(docId, { bytes, proxy })
   return proxy
 }

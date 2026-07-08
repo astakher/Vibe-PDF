@@ -6,10 +6,15 @@ import { DocumentView } from './components/viewer/DocumentView'
 import { ExportDialog } from './components/ExportDialog'
 import { SignatureDialog } from './components/SignatureDialog'
 import { InfoBanner } from './components/InfoBanner'
+import { XfaBar } from './components/XfaBar'
+import { XfaFormView } from './components/viewer/XfaFormView'
 import { redo, undo, useDocStore, useUiStore } from './store'
 
 export default function App() {
   const loaded = useUiStore((s) => s.loaded)
+  const isXfa = useUiStore((s) => s.isXfa)
+  const xfaExperiment = useUiStore((s) => s.xfaExperiment)
+  const xfaMode = loaded && isXfa && xfaExperiment
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -58,6 +63,16 @@ export default function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  if (xfaMode) {
+    return (
+      <div className="app">
+        <XfaBar />
+        <InfoBanner />
+        <XfaFormView />
+      </div>
+    )
+  }
 
   return (
     <div className="app">

@@ -34,7 +34,15 @@ export async function openPdfFile(file: File): Promise<void> {
   useDocStore.getState().setDocument(descriptors)
   clearHistory()
   useUiStore.getState().setLoadedDocument(docId, file.name)
-  void announceDocument(docId, wasEncrypted)
+  // XFA (LiveCycle) detection — drives the experimental XFA form mode
+  let isXfa = false
+  try {
+    isXfa = getDocumentProxy(docId).isPureXfa === true
+  } catch {
+    /* best effort */
+  }
+  useUiStore.getState().setIsXfa(isXfa)
+  void announceDocument(docId, wasEncrypted, isXfa)
 }
 
 /** Merge another PDF's pages into the current document at the given index (default: end). */
@@ -47,8 +55,16 @@ export async function mergePdfFile(file: File, atIndex?: number): Promise<void> 
 }
 
 /** Post-load notice: decrypted copy, or guidance when the PDF has no form fields. */
-async function announceDocument(docId: string, wasEncrypted: boolean): Promise<void> {
+async function announceDocument(docId: string, wasEncrypted: boolean, isXfa: boolean): Promise<void> {
   const { setNotice } = useUiStore.getState()
+  if (isXfa) {
+    setNotice({
+      kind: 'no-form',
+      message:
+        'This is an Adobe LiveCycle (XFA) form. Vibe PDF shows a limited experimental view — for full functionality, open it in Adobe Acrobat Reader.',
+    })
+    return
+  }
   if (wasEncrypted) {
     setNotice({
       kind: 'decrypted',

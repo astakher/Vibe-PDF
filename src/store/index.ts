@@ -168,8 +168,13 @@ export type UiState = {
   /** which tab the export dialog opens on */
   exportTab: 'download' | 'split' | 'compress'
   notice: Notice | null
+  /** current doc is a pure XFA (LiveCycle) form */
+  isXfa: boolean
+  /** experimental XFA form mode enabled via ?xfa=1 */
+  xfaExperiment: boolean
 
   setNotice: (notice: Notice | null) => void
+  setIsXfa: (isXfa: boolean) => void
   setLoadedDocument: (docId: string, fileName: string) => void
   setTool: (tool: Tool) => void
   setZoom: (zoom: number) => void
@@ -206,8 +211,12 @@ export const useUiStore = create<UiState>()((set) => ({
   exportDialogOpen: false,
   exportTab: 'download',
   notice: null,
+  isXfa: false,
+  xfaExperiment:
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('xfa'),
 
   setNotice: (notice) => set({ notice }),
+  setIsXfa: (isXfa) => set({ isXfa }),
   setLoadedDocument: (docId, fileName) =>
     set({
       loaded: true,
@@ -216,6 +225,7 @@ export const useUiStore = create<UiState>()((set) => ({
       currentPageIndex: 0,
       selectedEditId: null,
       notice: null,
+      isXfa: false,
     }),
   setTool: (tool) => set({ tool, selectedEditId: null, editingEditId: null }),
   setZoom: (zoom) => set({ zoom: Math.min(4, Math.max(0.25, zoom)) }),
