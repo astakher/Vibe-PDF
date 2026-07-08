@@ -66,7 +66,7 @@ export default function App() {
 
   if (xfaMode) {
     return (
-      <div className="app">
+      <div className="app xfa-mode">
         <XfaBar />
         <InfoBanner />
         <XfaFormView />

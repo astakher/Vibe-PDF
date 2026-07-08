@@ -30,25 +30,12 @@ export async function exportXfaDownload(): Promise<void> {
   downloadBytes(bytes, `${baseName()}-filled.pdf`)
 }
 
+/**
+ * Print the on-screen (pdf.js-rendered) XFA form, NOT a regenerated PDF: browsers
+ * can't render XFA, so printing saved bytes shows Adobe's "Please wait" placeholder.
+ * Printing the live HTML captures the real form + typed values. Print-only CSS
+ * (.xfa-mode @media print in app.css) hides the app chrome and paginates the pages.
+ */
 export async function printXfa(): Promise<void> {
-  const bytes = await savedBytes()
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
-  const iframe = document.createElement('iframe')
-  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0'
-  iframe.dataset.purpose = 'print'
-  iframe.src = url
-  const cleanup = () => {
-    URL.revokeObjectURL(url)
-    iframe.remove()
-  }
-  iframe.onload = () => {
-    try {
-      iframe.contentWindow?.addEventListener('afterprint', () => setTimeout(cleanup, 1000))
-      iframe.contentWindow?.print()
-      setTimeout(cleanup, 120000)
-    } catch {
-      cleanup()
-    }
-  }
-  document.body.appendChild(iframe)
+  window.print()
 }

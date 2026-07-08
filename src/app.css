@@ -280,6 +280,34 @@ body {
   line-height: 1 !important;
 }
 
+/* Printing an XFA form prints the on-screen rendered HTML (browsers can't render
+   the XFA PDF itself). Hide the app chrome and paginate the form pages. */
+@media print {
+  .xfa-mode .toolbar,
+  .xfa-mode .info-banner {
+    display: none !important;
+  }
+  .xfa-mode,
+  .xfa-mode .document-view {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    background: #fff !important;
+  }
+  .xfa-mode .document-pages {
+    display: block !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  .xfa-mode .xfa-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 auto !important;
+    break-after: page;
+    page-break-after: always;
+  }
+}
+
 .xfa-tag {
   font-size: 12px;
   color: #8a5c00;
