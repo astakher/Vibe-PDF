@@ -41,6 +41,12 @@ export function ExportDialog() {
   const [warnings, setWarnings] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
+  // Prefill the file name with the original document name each time the dialog opens.
+  const originalName = useUiStore((s) => s.fileName)
+  useEffect(() => {
+    if (open) setFileName((originalName ?? 'document').replace(/\.pdf$/i, ''))
+  }, [open, originalName])
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -159,7 +165,7 @@ export function ExportDialog() {
                 <input
                   type="text"
                   className="text-input"
-                  placeholder={`${useUiStore.getState().fileName?.replace(/\.pdf$/i, '') ?? 'document'}-edited`}
+                  placeholder="document"
                   value={fileName}
                   onChange={(e) => setFileName(e.target.value)}
                 />
