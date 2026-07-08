@@ -61,7 +61,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Toolbar />
+      {loaded && <Toolbar />}
       <InfoBanner />
       {loaded ? (
         <div className="workspace">
