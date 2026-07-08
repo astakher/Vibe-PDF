@@ -76,6 +76,7 @@ function XfaPage({
           linkService: linkServiceStub as never,
           intent: 'display',
         })
+        centerSingleLineFields(layer)
       } catch (e) {
         host.textContent = `Could not render XFA page ${index + 1}: ${e instanceof Error ? e.message : e}`
       }
@@ -86,4 +87,21 @@ function XfaPage({
   }, [docId, sourceIndex, zoom, index])
 
   return <div className="xfa-page" ref={hostRef} data-page-index={index} />
+}
+
+/**
+ * pdf.js renders XFA text fields as <textarea>/<input> with line-height 1, so a
+ * single line of text sits at the TOP of a taller field box (Acrobat centers it).
+ * For fields short enough to hold ~one line, set line-height to the field height
+ * so the text centers vertically. Genuinely multi-line fields are left alone.
+ */
+function centerSingleLineFields(layer: HTMLElement): void {
+  const fields = layer.querySelectorAll<HTMLElement>('input.xfaTextfield, textarea.xfaTextfield')
+  for (const el of fields) {
+    const fontSize = parseFloat(getComputedStyle(el).fontSize) || 0
+    const h = el.clientHeight
+    if (fontSize > 0 && h > 0 && h <= fontSize * 3) {
+      el.style.lineHeight = `${h}px`
+    }
+  }
 }
